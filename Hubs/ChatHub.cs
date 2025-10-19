@@ -26,13 +26,19 @@ namespace RealTimeChatApp.Hubs
             {
                 var result = await _chatRoomService.JoinRoomAsync(roomCode, username, Context.ConnectionId);
                 
+                _logger.LogInformation($"JoinRoom invoked. roomCode={roomCode}, username={username}, connectionId={Context.ConnectionId}");
+
                 if (result.Success)
                 {
                     // Add connection to SignalR group
                     await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
                     
-                    // Send success response to the user
-                    await Clients.Caller.SendAsync("JoinRoomResult", result);
+                    // Send success response to the user (lightweight payload)
+                    await Clients.Caller.SendAsync("JoinRoomResult", new {
+                        success = result.Success,
+                        message = result.Message,
+                        roomCode = result.RoomCode
+                    });
                     
                     // Notify other users in the room
                     var joinMessage = new Message
@@ -55,6 +61,8 @@ namespace RealTimeChatApp.Hubs
                             ParticipantCount = room.Participants.Count,
                             MaxParticipants = room.MaxParticipants,
                             TimeRemaining = room.TimeRemaining,
+                            CreatedAt = room.CreatedAt,
+                            ExpiresAt = room.ExpiresAt,
                             Participants = room.Participants.Values.Select(u => u.Username).ToList()
                         });
 
@@ -67,7 +75,11 @@ namespace RealTimeChatApp.Hubs
                 }
                 else
                 {
-                    await Clients.Caller.SendAsync("JoinRoomResult", result);
+                    await Clients.Caller.SendAsync("JoinRoomResult", new {
+                        success = result.Success,
+                        message = result.Message,
+                        roomCode = result.RoomCode
+                    });
                 }
             }
             catch (Exception ex)
@@ -81,19 +93,25 @@ namespace RealTimeChatApp.Hubs
             }
         }
 
-        public async Task CreateRoom(string username)
+        public async Task CreateRoom(string username, int expirationMinutes = 60)
         {
             try
             {
-                var result = await _chatRoomService.CreateRoomAsync(username, Context.ConnectionId);
+                var result = await _chatRoomService.CreateRoomAsync(username, Context.ConnectionId, expirationMinutes);
                 
+                _logger.LogInformation($"CreateRoom invoked. username={username}, expirationMinutes={expirationMinutes}, connectionId={Context.ConnectionId}");
+
                 if (result.Success)
                 {
                     // Add connection to SignalR group
                     await Groups.AddToGroupAsync(Context.ConnectionId, result.RoomCode!);
                     
-                    // Send success response with room code
-                    await Clients.Caller.SendAsync("CreateRoomResult", result);
+                    // Send success response with room code (lightweight payload to avoid serialization issues)
+                    await Clients.Caller.SendAsync("CreateRoomResult", new {
+                        success = result.Success,
+                        message = result.Message,
+                        roomCode = result.RoomCode
+                    });
                     
                     // Send room information
                     var room = result.Room;
@@ -105,15 +123,21 @@ namespace RealTimeChatApp.Hubs
                             ParticipantCount = room.Participants.Count,
                             MaxParticipants = room.MaxParticipants,
                             TimeRemaining = room.TimeRemaining,
+                            CreatedAt = room.CreatedAt,
+                            ExpiresAt = room.ExpiresAt,
                             Participants = room.Participants.Values.Select(u => u.Username).ToList()
                         });
                     }
                     
-                    _logger.LogInformation($"User {username} created room {result.RoomCode}");
+                    _logger.LogInformation($"User {username} created room {result.RoomCode} with {expirationMinutes} minutes expiration");
                 }
                 else
                 {
-                    await Clients.Caller.SendAsync("CreateRoomResult", result);
+                    await Clients.Caller.SendAsync("CreateRoomResult", new {
+                        success = result.Success,
+                        message = result.Message,
+                        roomCode = result.RoomCode
+                    });
                 }
             }
             catch (Exception ex)
@@ -228,6 +252,8 @@ namespace RealTimeChatApp.Hubs
                             ParticipantCount = room.Participants.Count,
                             MaxParticipants = room.MaxParticipants,
                             TimeRemaining = room.TimeRemaining,
+                            CreatedAt = room.CreatedAt,
+                            ExpiresAt = room.ExpiresAt,
                             Participants = room.Participants.Values.Select(u => u.Username).ToList()
                         });
                     }

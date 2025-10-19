@@ -4,7 +4,7 @@ namespace RealTimeChatApp.Services
 {
     public interface IChatRoomService
     {
-        Task<RoomResponse> CreateRoomAsync(string username, string connectionId);
+        Task<RoomResponse> CreateRoomAsync(string username, string connectionId, int expirationMinutes = 60);
         Task<RoomResponse> JoinRoomAsync(string roomCode, string username, string connectionId);
         Task<bool> LeaveRoomAsync(string connectionId);
         Task<MessageResponse> SendMessageAsync(string connectionId, string content);
@@ -18,89 +18,113 @@ namespace RealTimeChatApp.Services
     {
         private readonly IMemoryStorageService _storageService;
         private readonly Random _random = new();
+        private readonly ILogger<ChatRoomService> _logger;
 
-        public ChatRoomService(IMemoryStorageService storageService)
+        public ChatRoomService(IMemoryStorageService storageService, ILogger<ChatRoomService> logger)
         {
             _storageService = storageService;
+            _logger = logger;
         }
 
-        public async Task<RoomResponse> CreateRoomAsync(string username, string connectionId)
+        public async Task<RoomResponse> CreateRoomAsync(string username, string connectionId, int expirationMinutes = 60)
         {
-            if (string.IsNullOrWhiteSpace(username))
+            try
             {
-                return new RoomResponse 
-                { 
-                    Success = false, 
-                    Message = "Username is required" 
-                };
-            }
-
-            // Check if user is already in a room
-            var existingUser = await _storageService.GetUserAsync(connectionId);
-            if (existingUser != null)
-            {
-                return new RoomResponse 
-                { 
-                    Success = false, 
-                    Message = "You are already in a chat room" 
-                };
-            }
-
-            string roomCode;
-            bool roomCreated = false;
-            int attempts = 0;
-            const int maxAttempts = 10;
-
-            // Try to generate a unique room code
-            do
-            {
-                roomCode = GenerateRoomCode();
-                var existingRoom = await _storageService.GetRoomAsync(roomCode);
-                
-                if (existingRoom == null)
+                if (string.IsNullOrWhiteSpace(username))
                 {
-                    // Create new room
-                    var room = new ChatRoom
-                    {
-                        RoomCode = roomCode,
-                        CreatorConnectionId = connectionId
+                    return new RoomResponse 
+                    { 
+                        Success = false, 
+                        Message = "Username is required" 
                     };
-
-                    // Create user
-                    var user = new User
-                    {
-                        ConnectionId = connectionId,
-                        Username = username,
-                        RoomCode = roomCode
-                    };
-
-                    roomCreated = await _storageService.AddRoomAsync(room);
-                    if (roomCreated)
-                    {
-                        await _storageService.AddUserToRoomAsync(roomCode, user);
-                    }
                 }
 
-                attempts++;
-            } while (!roomCreated && attempts < maxAttempts);
+                if (expirationMinutes < 1 || expirationMinutes > 1440) // Max 24 hours
+                {
+                    return new RoomResponse 
+                    { 
+                        Success = false, 
+                        Message = "Expiration time must be between 1 and 1440 minutes" 
+                    };
+                }
 
-            if (!roomCreated)
-            {
+                // Check if user is already in a room
+                var existingUser = await _storageService.GetUserAsync(connectionId);
+                if (existingUser != null)
+                {
+                    return new RoomResponse 
+                    { 
+                        Success = false, 
+                        Message = "You are already in a chat room" 
+                    };
+                }
+
+                string roomCode;
+                bool roomCreated = false;
+                int attempts = 0;
+                const int maxAttempts = 10;
+
+                // Try to generate a unique room code
+                do
+                {
+                    roomCode = GenerateRoomCode();
+                    var existingRoom = await _storageService.GetRoomAsync(roomCode);
+                    
+                    if (existingRoom == null)
+                    {
+                        // Create new room
+                        var room = new ChatRoom
+                        {
+                            RoomCode = roomCode,
+                            CreatorConnectionId = connectionId,
+                            ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes)
+                        };
+
+                        // Create user
+                        var user = new User
+                        {
+                            ConnectionId = connectionId,
+                            Username = username,
+                            RoomCode = roomCode
+                        };
+
+                        roomCreated = await _storageService.AddRoomAsync(room);
+                        if (roomCreated)
+                        {
+                            await _storageService.AddUserToRoomAsync(roomCode, user);
+                        }
+                    }
+
+                    attempts++;
+                } while (!roomCreated && attempts < maxAttempts);
+
+                if (!roomCreated)
+                {
+                    return new RoomResponse 
+                    { 
+                        Success = false, 
+                        Message = "Failed to create room. Please try again." 
+                    };
+                }
+
+                var createdRoom = await _storageService.GetRoomAsync(roomCode);
                 return new RoomResponse 
                 { 
-                    Success = false, 
-                    Message = "Failed to create room. Please try again." 
+                    Success = true, 
+                    Message = "Room created successfully", 
+                    RoomCode = roomCode,
+                    Room = createdRoom
                 };
             }
-
-            var createdRoom = await _storageService.GetRoomAsync(roomCode);
-            return new RoomResponse 
-            { 
-                Success = true, 
-                Message = "Room created successfully", 
-                RoomCode = roomCode,
-                Room = createdRoom
-            };
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Exception in CreateRoomAsync");
+                return new RoomResponse
+                {
+                    Success = false,
+                    Message = "An internal error occurred while creating the room"
+                };
+            }
         }
 
         public async Task<RoomResponse> JoinRoomAsync(string roomCode, string username, string connectionId)

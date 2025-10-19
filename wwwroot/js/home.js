@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create Room Button Click
     createRoomBtn.addEventListener('click', async function() {
         const username = createUsernameInput.value.trim();
+        const expirationMinutes = parseInt(document.getElementById('expirationMinutes').value);
         
         if (!validateUsername(username)) {
             return;
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingModal.show();
             createRoomBtn.disabled = true;
 
-            await connection.invoke("CreateRoom", username);
+            await connection.invoke("CreateRoom", username, expirationMinutes);
         } catch (err) {
             console.error("Error creating room:", err);
             showAlert("Error creating room. Please try again.", "danger");

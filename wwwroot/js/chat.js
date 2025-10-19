@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeRemaining = document.getElementById('timeRemaining');
     const participantCount = document.getElementById('participantCount');
     const maxParticipants = document.getElementById('maxParticipants');
+    const participantsCountBadge = document.getElementById('participantsCountBadge');
     const chatMessages = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
@@ -87,8 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
         maxParticipants.textContent = roomInfo.maxParticipants;
         updateParticipants(roomInfo.participants);
         
-        if (roomInfo.timeRemaining) {
-            startCountdown(roomInfo.timeRemaining);
+        if (roomInfo.expiresAt) {
+            // Parse server UTC ISO timestamp
+            const expires = new Date(roomInfo.expiresAt);
+            const created = roomInfo.createdAt ? new Date(roomInfo.createdAt) : null;
+            startCountdownFromDates(created, expires);
+            // Set expires label
+            document.getElementById('expiresAtLabel').textContent = `expires ${expires.toLocaleString()}`;
         }
         
         // Enable message input
@@ -261,6 +267,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateParticipants(participants) {
         participantsContainer.innerHTML = '';
         
+        if (participantsCountBadge) {
+            participantsCountBadge.textContent = participants.length;
+        }
+        
         participants.forEach(participant => {
             const participantDiv = document.createElement('div');
             participantDiv.className = 'participant-item';
@@ -273,41 +283,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function startCountdown(timeRemainingMs) {
+    function startCountdownFromDates(createdAt, expiresAt) {
         if (countdownInterval) {
             clearInterval(countdownInterval);
         }
-        
-        let endTime = new Date().getTime() + timeRemainingMs.ticks / 10000; // Convert from ticks to milliseconds
-        
-        countdownInterval = setInterval(() => {
+
+        const start = createdAt ? createdAt.getTime() : (new Date()).getTime();
+        const end = expiresAt.getTime();
+        const total = Math.max(end - start, 1000);
+
+        function update() {
             const now = new Date().getTime();
-            const distance = endTime - now;
-            
+            const distance = end - now;
+
             if (distance <= 0) {
                 timeRemaining.textContent = "00:00:00";
+                document.getElementById('timeProgressBar').style.width = '0%';
+                document.getElementById('timeProgressBar').classList.remove('bg-light');
+                document.getElementById('timeProgressBar').classList.add('bg-danger');
                 clearInterval(countdownInterval);
                 return;
             }
-            
+
             const hours = Math.floor(distance / (1000 * 60 * 60));
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            
+
             timeRemaining.textContent = 
                 `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            // Show warning when less than 5 minutes remaining
-            if (distance <= 5 * 60 * 1000) {
-                timeRemaining.parentElement.classList.add('text-warning');
+
+            const elapsed = now - start;
+            const pct = Math.max(0, Math.min(100, (distance <= 0 ? 0 : (distance / total) * 100)));
+            const progressPct = Math.round(pct);
+            const bar = document.getElementById('timeProgressBar');
+            if (bar) {
+                bar.style.width = `${progressPct}%`;
+                // Color transitions: green (>50%), yellow (20-50), red (<20)
+                bar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-light');
+                if (progressPct > 50) bar.classList.add('bg-success');
+                else if (progressPct > 20) bar.classList.add('bg-warning');
+                else bar.classList.add('bg-danger');
             }
-            
-            // Show danger when less than 1 minute remaining
-            if (distance <= 1 * 60 * 1000) {
-                timeRemaining.parentElement.classList.remove('text-warning');
-                timeRemaining.parentElement.classList.add('text-danger');
-            }
-        }, 1000);
+        }
+
+        update();
+        countdownInterval = setInterval(update, 1000);
     }
 
     function scrollToBottom() {

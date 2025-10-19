@@ -10,7 +10,7 @@
                     <i class="fas fa-comments text-primary"></i>
                     Real-Time Chat
                 </h1>
-                <p class="lead mb-5">Create temporary chat rooms that automatically expire after 1 hour. No registration required!</p>
+                <p class="lead mb-5">Create temporary chat rooms with customizable expiration times. No registration required!</p>
                 
                 <div class="row g-4">
                     <div class="col-md-6">
@@ -23,6 +23,18 @@
                                 <p class="card-text">Start a new chat room and get a 4-digit code to share with others.</p>
                                 <div class="mb-3">
                                     <input type="text" id="createUsername" class="form-control" placeholder="Enter your username" maxlength="20">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="expirationMinutes" class="form-label">Room Expiration (minutes)</label>
+                                    <select id="expirationMinutes" class="form-select">
+                                        <option value="15">15 minutes</option>
+                                        <option value="30">30 minutes</option>
+                                        <option value="60" selected>1 hour</option>
+                                        <option value="120">2 hours</option>
+                                        <option value="240">4 hours</option>
+                                        <option value="480">8 hours</option>
+                                        <option value="1440">24 hours</option>
+                                    </select>
                                 </div>
                                 <button id="createRoomBtn" class="btn btn-success btn-lg">
                                     <i class="fas fa-plus me-2"></i>Create Room
@@ -61,8 +73,8 @@
             <div class="col-md-3">
                 <div class="feature-box">
                     <i class="fas fa-clock text-warning fa-2x mb-3"></i>
-                    <h5>Temporary</h5>
-                    <p>Rooms expire after exactly 1 hour</p>
+                    <h5>Custom Expiration</h5>
+                    <p>Set room expiration from 15 minutes to 24 hours</p>
                 </div>
             </div>
             <div class="col-md-3">
