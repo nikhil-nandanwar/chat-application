@@ -1,65 +1,102 @@
 @{
-    ViewData["Title"] = "Real-Time Chat";
+    ViewData["Title"] = "Home";
 }
 
-<div class="hero-section py-5">
+<div class="hero-section py-5" role="region" aria-label="Chat room options">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8 text-center">
                 <h1 class="display-4 mb-4">
-                    <i class="fas fa-comments text-primary"></i>
+                    <i class="fas fa-comments" aria-hidden="true"></i>
                     Real-Time Chat
                 </h1>
                 <p class="lead mb-5">Create temporary chat rooms with customizable expiration times. No registration required!</p>
                 
                 <div class="row g-4">
+                    <!-- Create Room Card -->
                     <div class="col-md-6">
-                        <div class="card h-100 shadow-sm">
+                        <article class="card h-100 shadow-sm">
                             <div class="card-body text-center">
                                 <div class="mb-3">
-                                    <i class="fas fa-plus-circle text-success fa-3x"></i>
+                                    <i class="fas fa-plus-circle text-success fa-3x" aria-hidden="true"></i>
                                 </div>
-                                <h5 class="card-title">Create New Room</h5>
+                                <h2 class="card-title h5">Create New Room</h2>
                                 <p class="card-text">Start a new chat room and get a 4-digit code to share with others.</p>
-                                <div class="mb-3">
-                                    <input type="text" id="createUsername" class="form-control" placeholder="Enter your username" maxlength="20">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="expirationMinutes" class="form-label">Room Expiration (minutes)</label>
-                                    <select id="expirationMinutes" class="form-select">
-                                        <option value="15">15 minutes</option>
-                                        <option value="30">30 minutes</option>
-                                        <option value="60" selected>1 hour</option>
-                                        <option value="120">2 hours</option>
-                                        <option value="240">4 hours</option>
-                                        <option value="480">8 hours</option>
-                                        <option value="1440">24 hours</option>
-                                    </select>
-                                </div>
-                                <button id="createRoomBtn" class="btn btn-success btn-lg">
-                                    <i class="fas fa-plus me-2"></i>Create Room
-                                </button>
+                                <form id="createRoomForm" onsubmit="return false;">
+                                    <div class="mb-3">
+                                        <label for="createUsername" class="visually-hidden">Your username</label>
+                                        <input 
+                                            type="text" 
+                                            id="createUsername" 
+                                            class="form-control" 
+                                            placeholder="Enter your username" 
+                                            maxlength="50"
+                                            minlength="2"
+                                            required
+                                            autocomplete="nickname"
+                                            aria-label="Username for creating room" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="expirationMinutes" class="form-label">Room Expiration</label>
+                                        <select id="expirationMinutes" class="form-select" aria-label="Select room expiration time">
+                                            <option value="15">15 minutes</option>
+                                            <option value="30">30 minutes</option>
+                                            <option value="60" selected>1 hour</option>
+                                            <option value="120">2 hours</option>
+                                            <option value="240">4 hours</option>
+                                            <option value="480">8 hours</option>
+                                            <option value="1440">24 hours</option>
+                                        </select>
+                                    </div>
+                                    <button id="createRoomBtn" type="submit" class="btn btn-success btn-lg" aria-label="Create new chat room">
+                                        <i class="fas fa-plus me-2" aria-hidden="true"></i>Create Room
+                                    </button>
+                                </form>
                             </div>
-                        </div>
+                        </article>
                     </div>
                     
+                    <!-- Join Room Card -->
                     <div class="col-md-6">
-                        <div class="card h-100 shadow-sm">
+                        <article class="card h-100 shadow-sm">
                             <div class="card-body text-center">
                                 <div class="mb-3">
-                                    <i class="fas fa-sign-in-alt text-primary fa-3x"></i>
+                                    <i class="fas fa-sign-in-alt text-primary fa-3x" aria-hidden="true"></i>
                                 </div>
-                                <h5 class="card-title">Join Existing Room</h5>
+                                <h2 class="card-title h5">Join Existing Room</h2>
                                 <p class="card-text">Enter a 4-digit room code to join an existing chat room.</p>
-                                <div class="mb-3">
-                                    <input type="text" id="joinUsername" class="form-control mb-2" placeholder="Enter your username" maxlength="20">
-                                    <input type="text" id="roomCodeInput" class="form-control" placeholder="Enter 4-digit room code" maxlength="4" pattern="[0-9]{4}">
-                                </div>
-                                <button id="joinRoomBtn" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-sign-in-alt me-2"></i>Join Room
-                                </button>
+                                <form id="joinRoomForm" onsubmit="return false;">
+                                    <div class="mb-3">
+                                        <label for="joinUsername" class="visually-hidden">Your username</label>
+                                        <input 
+                                            type="text" 
+                                            id="joinUsername" 
+                                            class="form-control mb-2" 
+                                            placeholder="Enter your username" 
+                                            maxlength="50"
+                                            minlength="2"
+                                            required
+                                            autocomplete="nickname"
+                                            aria-label="Username for joining room" />
+                                        <label for="roomCodeInput" class="visually-hidden">Room code</label>
+                                        <input 
+                                            type="text" 
+                                            id="roomCodeInput" 
+                                            class="form-control" 
+                                            placeholder="Enter 4-digit room code" 
+                                            maxlength="4" 
+                                            minlength="4"
+                                            pattern="[0-9]{4}"
+                                            inputmode="numeric"
+                                            required
+                                            aria-label="4-digit room code" />
+                                    </div>
+                                    <button id="joinRoomBtn" type="submit" class="btn btn-primary btn-lg" aria-label="Join existing chat room">
+                                        <i class="fas fa-sign-in-alt me-2" aria-hidden="true"></i>Join Room
+                                    </button>
+                                </form>
                             </div>
-                        </div>
+                        </article>
                     </div>
                 </div>
             </div>
@@ -67,40 +104,41 @@
     </div>
 </div>
 
-<div class="features-section py-5 bg-light">
+<section class="features-section py-5" aria-label="Features">
     <div class="container">
-        <div class="row text-center">
-            <div class="col-md-3">
+        <h2 class="visually-hidden">Application Features</h2>
+        <div class="row text-center g-4">
+            <div class="col-md-3 col-sm-6">
                 <div class="feature-box">
-                    <i class="fas fa-clock text-warning fa-2x mb-3"></i>
-                    <h5>Custom Expiration</h5>
+                    <i class="fas fa-clock text-warning fa-2x mb-3" aria-hidden="true"></i>
+                    <h3 class="h5">Custom Expiration</h3>
                     <p>Set room expiration from 15 minutes to 24 hours</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <div class="feature-box">
-                    <i class="fas fa-users text-info fa-2x mb-3"></i>
-                    <h5>Up to 20 Users</h5>
+                    <i class="fas fa-users text-info fa-2x mb-3" aria-hidden="true"></i>
+                    <h3 class="h5">Up to 20 Users</h3>
                     <p>Maximum 20 participants per room</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <div class="feature-box">
-                    <i class="fas fa-bolt text-danger fa-2x mb-3"></i>
-                    <h5>Real-Time</h5>
-                    <p>Messages appear instantly</p>
+                    <i class="fas fa-bolt text-danger fa-2x mb-3" aria-hidden="true"></i>
+                    <h3 class="h5">Real-Time</h3>
+                    <p>Messages appear instantly using WebSockets</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <div class="feature-box">
-                    <i class="fas fa-shield-alt text-success fa-2x mb-3"></i>
-                    <h5>Privacy First</h5>
-                    <p>No data stored permanently</p>
+                    <i class="fas fa-shield-alt text-success fa-2x mb-3" aria-hidden="true"></i>
+                    <h3 class="h5">Privacy First</h3>
+                    <p>No data stored permanently - truly temporary</p>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Loading Modal -->
 <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">

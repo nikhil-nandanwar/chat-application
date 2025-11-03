@@ -2,35 +2,36 @@
     ViewData["Title"] = "Chat Room";
 }
 
-<div class="chat-app">
+<div class="chat-app" role="application" aria-label="Chat application">
     <!-- Room Header -->
-    <header class="chat-header">
+    <header class="chat-header" role="banner">
         <div class="header-content">
             <div class="room-info">
                 <div class="room-title">
-                    <i class="fas fa-comments"></i>
-                    <span>Room: <strong id="roomCodeDisplay">----</strong></span>
+                    <i class="fas fa-comments" aria-hidden="true"></i>
+                    <span>Room: <strong id="roomCodeDisplay" aria-live="polite">----</strong></span>
                 </div>
                 <div class="room-meta">
                     <div class="timer">
-                        <i class="fas fa-clock"></i>
-                            <div class="time-display">
-                                <span id="timeRemaining">--:--:--</span>
-                                <small class="expires-at text-light ms-2" id="expiresAtLabel"></small>
-                            </div>
-                            <div class="progress time-progress mt-2" style="height:6px; width:200px;">
-                                <div id="timeProgressBar" class="progress-bar bg-light" role="progressbar" style="width: 100%;"></div>
-                            </div>
+                        <i class="fas fa-clock" aria-hidden="true"></i>
+                        <div class="time-display">
+                            <span id="timeRemaining" aria-live="off" aria-label="Time remaining">--:--:--</span>
+                            <small class="expires-at text-light ms-2" id="expiresAtLabel"></small>
+                        </div>
+                        <div class="progress time-progress mt-2" style="height:6px; width:200px;" role="progressbar" aria-label="Time remaining progress">
+                            <div id="timeProgressBar" class="progress-bar bg-light" style="width: 100%;"></div>
+                        </div>
                     </div>
-                    <div class="participants-count">
-                        <i class="fas fa-users"></i>
+                    <div class="participants-count" aria-live="polite">
+                        <i class="fas fa-users" aria-hidden="true"></i>
                         <span id="participantCount">0</span>/<span id="maxParticipants">20</span>
+                        <span class="visually-hidden">participants</span>
                     </div>
                 </div>
             </div>
             <div class="header-actions">
-                <button id="leaveRoomBtn" class="btn-leave">
-                    <i class="fas fa-sign-out-alt"></i>
+                <button id="leaveRoomBtn" class="btn-leave" aria-label="Leave chat room">
+                    <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
                     <span>Leave</span>
                 </button>
             </div>
@@ -38,43 +39,64 @@
     </header>
 
     <!-- Chat Messages Area -->
-    <main class="chat-main">
-        <div class="messages-container" id="chatMessages">
+    <main class="chat-main" role="main">
+        <div class="messages-container" id="chatMessages" role="log" aria-live="polite" aria-label="Chat messages" tabindex="0">
             <div class="welcome-message">
                 <div class="welcome-icon">
-                    <i class="fas fa-comments"></i>
+                    <i class="fas fa-comments" aria-hidden="true"></i>
                 </div>
-                <h3>Welcome to the chat room!</h3>
+                <h1 class="h3">Welcome to the chat room!</h1>
                 <p>Start the conversation and connect with others...</p>
             </div>
         </div>
     </main>
 
     <!-- Message Input -->
-    <footer class="chat-footer">
+    <footer class="chat-footer" role="contentinfo">
         <div class="message-composer">
-            <div class="input-container">
-                <input type="text" id="messageInput" placeholder="Type your message..." maxlength="1000" disabled>
-                <button id="sendMessageBtn" class="btn-send" disabled>
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
+            <form id="messageForm" onsubmit="return false;">
+                <div class="input-container">
+                    <label for="messageInput" class="visually-hidden">Type your message</label>
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Type your message..." 
+                        maxlength="1000" 
+                        disabled 
+                        aria-label="Message input"
+                        autocomplete="off" />
+                    <button 
+                        id="sendMessageBtn" 
+                        type="submit"
+                        class="btn-send" 
+                        disabled 
+                        aria-label="Send message">
+                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </form>
         </div>
     </footer>
 
     <!-- Participants Panel -->
-    <aside class="participants-sidebar">
-        <button class="sidebar-toggle" data-bs-toggle="collapse" data-bs-target="#participantsList">
-            <i class="fas fa-users"></i>
+    <aside class="participants-sidebar" role="complementary" aria-label="Participants list">
+        <button 
+            class="sidebar-toggle" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#participantsList"
+            aria-expanded="false"
+            aria-controls="participantsList"
+            aria-label="Toggle participants list">
+            <i class="fas fa-users" aria-hidden="true"></i>
             <span class="toggle-text">Participants</span>
         </button>
         <div class="collapse" id="participantsList">
             <div class="participants-content">
                 <div class="participants-header">
-                    <h6>Online Users</h6>
-                    <span class="count-badge" id="participantsCountBadge">0</span>
+                    <h2 class="h6">Online Users</h2>
+                    <span class="count-badge" id="participantsCountBadge" aria-live="polite">0</span>
                 </div>
-                <div id="participantsContainer" class="participants-list">
+                <div id="participantsContainer" class="participants-list" role="list" aria-label="List of online users">
                     <!-- Participants will be populated by JavaScript -->
                 </div>
             </div>
@@ -82,26 +104,30 @@
     </aside>
 
     <!-- Connection Status -->
-    <div id="connectionStatus" class="connection-banner d-none">
+    <div id="connectionStatus" class="connection-banner d-none" role="alert" aria-live="assertive">
         <div class="banner-content">
-            <i class="fas fa-exclamation-triangle"></i>
+            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
             <span id="connectionMessage">Connecting...</span>
         </div>
     </div>
 
     <!-- Notification Toast -->
-    <div class="notification-container">
-        <div id="notificationToast" class="notification-toast" role="alert">
+    <div class="notification-container" aria-live="polite" aria-atomic="true">
+        <div id="notificationToast" class="notification-toast toast hide" role="alert" aria-live="polite" aria-atomic="true">
             <div class="toast-content">
                 <div class="toast-icon">
-                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-bell" aria-hidden="true"></i>
                 </div>
                 <div class="toast-body">
                     <strong>Notification</strong>
                     <div id="notificationBody"></div>
                 </div>
-                <button type="button" class="toast-close" data-bs-dismiss="toast">
-                    <i class="fas fa-times"></i>
+                <button 
+                    type="button" 
+                    class="toast-close" 
+                    data-bs-dismiss="toast" 
+                    aria-label="Close notification">
+                    <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
         </div>

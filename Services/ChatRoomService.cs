@@ -30,12 +30,23 @@ namespace RealTimeChatApp.Services
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(username))
+                // Validate username
+                if (!IsValidUsername(username))
                 {
                     return new RoomResponse 
                     { 
                         Success = false, 
-                        Message = "Username is required" 
+                        Message = "Invalid username. Use 2-50 characters with letters, numbers, spaces, and underscores only." 
+                    };
+                }
+
+                // Validate connection ID
+                if (string.IsNullOrWhiteSpace(connectionId))
+                {
+                    return new RoomResponse 
+                    { 
+                        Success = false, 
+                        Message = "Invalid connection" 
                     };
                 }
 
@@ -44,7 +55,7 @@ namespace RealTimeChatApp.Services
                     return new RoomResponse 
                     { 
                         Success = false, 
-                        Message = "Expiration time must be between 1 and 1440 minutes" 
+                        Message = "Expiration time must be between 1 and 1440 minutes (24 hours)" 
                     };
                 }
 
@@ -129,12 +140,33 @@ namespace RealTimeChatApp.Services
 
         public async Task<RoomResponse> JoinRoomAsync(string roomCode, string username, string connectionId)
         {
-            if (string.IsNullOrWhiteSpace(roomCode) || string.IsNullOrWhiteSpace(username))
+            // Validate room code
+            if (!IsValidRoomCode(roomCode))
             {
                 return new RoomResponse 
                 { 
                     Success = false, 
-                    Message = "Room code and username are required" 
+                    Message = "Invalid room code. Room code must be 4 digits." 
+                };
+            }
+
+            // Validate username
+            if (!IsValidUsername(username))
+            {
+                return new RoomResponse 
+                { 
+                    Success = false, 
+                    Message = "Invalid username. Use 2-50 characters with letters, numbers, spaces, and underscores only." 
+                };
+            }
+
+            // Validate connection ID
+            if (string.IsNullOrWhiteSpace(connectionId))
+            {
+                return new RoomResponse 
+                { 
+                    Success = false, 
+                    Message = "Invalid connection" 
                 };
             }
 
@@ -329,17 +361,54 @@ namespace RealTimeChatApp.Services
 
         private string FilterMessage(string content)
         {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return string.Empty;
+            }
+
             // Basic content filtering - remove excessive whitespace
             content = content.Trim();
             
             // Replace multiple consecutive spaces with single space
             content = System.Text.RegularExpressions.Regex.Replace(content, @"\s+", " ");
             
-            // Remove or replace potentially problematic characters
-            content = content.Replace("<script", "&lt;script");
-            content = content.Replace("</script", "&lt;/script");
+            // HTML encode to prevent XSS attacks
+            content = System.Net.WebUtility.HtmlEncode(content);
+            
+            // Limit length
+            if (content.Length > 1000)
+            {
+                content = content.Substring(0, 1000);
+            }
             
             return content;
+        }
+
+        private bool IsValidUsername(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return false;
+            }
+
+            if (username.Length < 2 || username.Length > 50)
+            {
+                return false;
+            }
+
+            // Only allow alphanumeric, spaces, and underscores
+            return System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-zA-Z0-9_\s]+$");
+        }
+
+        private bool IsValidRoomCode(string roomCode)
+        {
+            if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                return false;
+            }
+
+            // Room code must be exactly 4 digits
+            return System.Text.RegularExpressions.Regex.IsMatch(roomCode, @"^\d{4}$");
         }
     }
 }

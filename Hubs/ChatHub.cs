@@ -9,6 +9,8 @@ namespace RealTimeChatApp.Hubs
         private readonly IChatRoomService _chatRoomService;
         private readonly IMemoryStorageService _storageService;
         private readonly ILogger<ChatHub> _logger;
+        private static readonly HashSet<string> _connectedUsers = new();
+        private static readonly object _connectionLock = new();
 
         public ChatHub(
             IChatRoomService chatRoomService,
@@ -18,6 +20,16 @@ namespace RealTimeChatApp.Hubs
             _chatRoomService = chatRoomService;
             _storageService = storageService;
             _logger = logger;
+        }
+
+        public override async Task OnConnectedAsync()
+        {
+            lock (_connectionLock)
+            {
+                _connectedUsers.Add(Context.ConnectionId);
+            }
+            _logger.LogInformation($"Client connected: {Context.ConnectionId}");
+            await base.OnConnectedAsync();
         }
 
         public async Task JoinRoom(string roomCode, string username)
@@ -40,18 +52,7 @@ namespace RealTimeChatApp.Hubs
                         roomCode = result.RoomCode
                     });
                     
-                    // Notify other users in the room
-                    var joinMessage = new Message
-                    {
-                        Content = $"{username} joined the chat",
-                        Type = MessageType.UserJoined,
-                        Username = "System"
-                    };
-                    
-                    await _storageService.AddMessageToRoomAsync(roomCode, joinMessage);
-                    await Clients.Group(roomCode).SendAsync("ReceiveMessage", joinMessage);
-                    
-                    // Send room information and chat history to the new user
+                    // Send room information and chat history to the new user FIRST
                     var room = await _storageService.GetRoomAsync(roomCode);
                     if (room != null)
                     {
@@ -69,6 +70,16 @@ namespace RealTimeChatApp.Hubs
                         // Send chat history
                         var messages = await _storageService.GetRoomMessagesAsync(roomCode);
                         await Clients.Caller.SendAsync("ChatHistory", messages);
+                    }
+                    
+                    // Update participant count for all users (including caller)
+                    if (room != null)
+                    {
+                        await Clients.Group(roomCode).SendAsync("ParticipantUpdate", new
+                        {
+                            ParticipantCount = room.Participants.Count,
+                            Participants = room.Participants.Values.Select(u => u.Username).ToList()
+                        });
                     }
                     
                     _logger.LogInformation($"User {username} joined room {roomCode}");
@@ -194,10 +205,25 @@ namespace RealTimeChatApp.Hubs
             try
             {
                 var user = await _storageService.GetUserAsync(Context.ConnectionId);
-                if (user != null)
+                if (user != null && !string.IsNullOrEmpty(user.RoomCode))
                 {
                     var roomCode = user.RoomCode;
                     var username = user.Username;
+                    
+                    // Check if room still exists before processing leave
+                    var room = await _storageService.GetRoomAsync(roomCode);
+                    if (room == null)
+                    {
+                        _logger.LogWarning($"User {username} tried to leave non-existent room {roomCode}");
+                        return;
+                    }
+                    
+                    // Check if user is actually in the room's participant list
+                    if (!room.Participants.ContainsKey(Context.ConnectionId))
+                    {
+                        _logger.LogWarning($"User {username} (ConnectionId: {Context.ConnectionId}) not found in room {roomCode} participants");
+                        return;
+                    }
                     
                     // Remove from SignalR group
                     await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomCode);
@@ -205,25 +231,14 @@ namespace RealTimeChatApp.Hubs
                     // Remove user from room
                     await _chatRoomService.LeaveRoomAsync(Context.ConnectionId);
                     
-                    // Notify other users
-                    var leaveMessage = new Message
-                    {
-                        Content = $"{username} left the chat",
-                        Type = MessageType.UserLeft,
-                        Username = "System"
-                    };
-                    
-                    await _storageService.AddMessageToRoomAsync(roomCode, leaveMessage);
-                    await Clients.Group(roomCode).SendAsync("ReceiveMessage", leaveMessage);
-                    
                     // Update participant count for remaining users
-                    var room = await _storageService.GetRoomAsync(roomCode);
-                    if (room != null)
+                    var updatedRoom = await _storageService.GetRoomAsync(roomCode);
+                    if (updatedRoom != null)
                     {
                         await Clients.Group(roomCode).SendAsync("ParticipantUpdate", new
                         {
-                            ParticipantCount = room.Participants.Count,
-                            Participants = room.Participants.Values.Select(u => u.Username).ToList()
+                            ParticipantCount = updatedRoom.Participants.Count,
+                            Participants = updatedRoom.Participants.Values.Select(u => u.Username).ToList()
                         });
                     }
                     
@@ -267,9 +282,32 @@ namespace RealTimeChatApp.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
+            lock (_connectionLock)
+            {
+                _connectedUsers.Remove(Context.ConnectionId);
+            }
+
             try
             {
-                await LeaveRoom();
+                if (exception != null)
+                {
+                    _logger.LogWarning(exception, $"Client disconnected with error: {Context.ConnectionId}");
+                }
+                else
+                {
+                    _logger.LogInformation($"Client disconnected: {Context.ConnectionId}");
+                }
+
+                // Only process leave if user is actually in a room
+                var user = await _storageService.GetUserAsync(Context.ConnectionId);
+                if (user != null && !string.IsNullOrEmpty(user.RoomCode))
+                {
+                    await LeaveRoom();
+                }
+                else
+                {
+                    _logger.LogInformation($"Client {Context.ConnectionId} disconnected but was not in a room");
+                }
             }
             catch (Exception ex)
             {
@@ -277,6 +315,14 @@ namespace RealTimeChatApp.Hubs
             }
             
             await base.OnDisconnectedAsync(exception);
+        }
+
+        public Task<bool> IsConnected()
+        {
+            lock (_connectionLock)
+            {
+                return Task.FromResult(_connectedUsers.Contains(Context.ConnectionId));
+            }
         }
     }
 }

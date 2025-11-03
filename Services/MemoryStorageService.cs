@@ -108,7 +108,7 @@ namespace RealTimeChatApp.Services
                 return false;
             }
 
-            room.Messages.Add(message);
+            room.AddMessage(message);
             return true;
         }
 
@@ -120,7 +120,7 @@ namespace RealTimeChatApp.Services
                 return new List<Message>();
             }
 
-            return room.Messages
+            return room.GetMessages()
                 .OrderBy(m => m.Timestamp)
                 .ToList();
         }
