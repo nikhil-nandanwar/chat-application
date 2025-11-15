@@ -29,14 +29,15 @@ builder.Services.AddSignalR(options =>
 
 builder.Services.AddControllersWithViews();
 
-// Add CORS if needed
+// Add CORS for local network access
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
+    options.AddDefaultPolicy(policy =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyHeader()
-               .AllowAnyMethod();
+        policy.SetIsOriginAllowed(origin => true) // Allow any origin for local network
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // Required for SignalR
     });
 });
 
